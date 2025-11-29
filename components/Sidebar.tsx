@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ groups, selectedGroupId, onSel
                     <div className="bg-gradient-to-br from-teal-400 to-cyan-600 p-2 rounded-lg shadow-sm">
                         <HandCoins className="w-6 h-6 text-white" />
                     </div>
-                    <h1 className="text-xl font-bold tracking-wider text-gray-800 dark:text-white">MEU&NOSSO</h1>
+                    <h1 className="text-xl font-bold tracking-wider text-gray-800 dark:text-white">MEU & NOSSO</h1>
                 </div>
                 
                 <nav className="flex flex-col gap-2">

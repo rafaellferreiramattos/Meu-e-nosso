@@ -497,7 +497,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ user, onClose, on
                                     </button>
                                 </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                    O tema escolhido será salvo e aplicado automaticamente sempre que você acessar o MEU&NOSSO neste dispositivo.
+                                    O tema escolhido será salvo e aplicado automaticamente sempre que você acessar o MEU & NOSSO neste dispositivo.
                                 </p>
                             </div>
                         </div>

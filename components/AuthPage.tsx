@@ -54,7 +54,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                     <div className="mx-auto mb-4 bg-gradient-to-br from-teal-400 to-cyan-600 p-4 rounded-full w-fit shadow-lg shadow-teal-500/20">
                         <HandCoins className="w-12 h-12 text-white" />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">MEU&NOSSO</h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">MEU & NOSSO</h1>
                     <p className="text-gray-400">Organize o seu, realize o nosso.</p>
                 </div>
 
@@ -142,7 +142,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                 
                 <div className="mt-8 text-center space-y-2">
                     <p className="text-gray-500 text-sm">
-                        &copy; 2025 MEU&NOSSO. Todos os direitos reservados.
+                        &copy; 2025 MEU & NOSSO. Todos os direitos reservados.
                     </p>
                 </div>
             </div>
