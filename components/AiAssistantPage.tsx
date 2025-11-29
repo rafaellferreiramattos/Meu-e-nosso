@@ -92,8 +92,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const context = getFinancialContext();
             
-            // Updated Prompt to forbid Markdown syntax
-            const systemPrompt = `
+            const systemInstruction = `
                 Você é um consultor financeiro pessoal, amigável e especialista em economia doméstica para grupos e casais.
                 
                 CONTEXTO FINANCEIRO ATUAL (JSON):
@@ -115,9 +114,10 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: [
-                    { role: 'user', parts: [{ text: systemPrompt + "\n\n" + text }] }
-                ]
+                contents: text,
+                config: {
+                    systemInstruction: systemInstruction,
+                }
             });
 
             const modelMessage: Message = {
@@ -134,7 +134,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: "Desculpe, tive um problema ao conectar com minha inteligência. Por favor, verifique sua conexão ou tente novamente mais tarde.",
+                text: "Desculpe, tive um problema ao conectar com minha inteligência. Tente novamente mais tarde.",
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);
