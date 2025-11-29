@@ -47,6 +47,9 @@ const App: React.FC = () => {
     const [activeView, setActiveView] = useState('Dashboard');
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
+    // UI States
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
     // Modal states
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
     const [isRevenueModalOpen, setIsRevenueModalOpen] = useState(false); // New Modal State
@@ -267,6 +270,7 @@ const App: React.FC = () => {
         setCurrentUser(null);
         setSelectedGroupId(null);
         setCustomNotifications([]);
+        setIsMobileMenuOpen(false);
     };
 
     const handleDeleteAccount = useCallback(() => {
@@ -392,6 +396,7 @@ const App: React.FC = () => {
     const handleSelectGroup = (groupId: string) => {
         setSelectedGroupId(groupId);
         setActiveView('Dashboard');
+        setIsMobileMenuOpen(false);
     };
     
     const handleAddGoal = useCallback((newGoalData: Omit<Goal, 'id' | 'groupId'>) => {
@@ -510,7 +515,7 @@ const App: React.FC = () => {
             amount: debtToPay.amount,
             payers: [{ userId: debtToPay.from.id, amount: debtToPay.amount }],
             groupId: selectedGroupId,
-            date: new Date().toISOString(),
+            date: new Date().toISOString(), // This uses local timezone conversion but it's acceptable for immediate actions
             category: 'transfer',
             participantIds: [debtToPay.to.id],
             receiptUrl: receiptUrl
@@ -521,8 +526,6 @@ const App: React.FC = () => {
         
         // Notify Recipient
         if (currentUser) {
-            // Find the recipient user logic here is implicit in notify group members but let's target specifically if we wanted to be precise
-            // For now, standard expense notification works or we can customize
              const settings = debtToPay.to.notificationSettings;
              if (settings && settings.debts) {
                  setCustomNotifications(prev => [...prev, {
@@ -653,8 +656,10 @@ const App: React.FC = () => {
                 onSelectView={setActiveView}
                 onOpenSettings={() => setIsUserSettingsModalOpen(true)}
                 onLogout={handleLogout}
+                isOpen={isMobileMenuOpen}
+                onClose={() => setIsMobileMenuOpen(false)}
             />
-            <main className="flex-1 flex flex-col overflow-hidden">
+            <main className="flex-1 flex flex-col overflow-hidden w-full relative">
                 <Header 
                     group={selectedGroup} 
                     currentUser={currentUser}
@@ -664,6 +669,7 @@ const App: React.FC = () => {
                     onMarkNotificationAsRead={markAsRead}
                     onClearNotifications={clearAll}
                     onNavigate={setActiveView}
+                    onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
                 />
                 <div className="flex-1 overflow-y-auto p-4 md:p-8">
                     {activeView === 'Dashboard' ? (

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, MoreVertical, Heart, Users, Home, Plane, Briefcase, Gift, PiggyBank, GraduationCap, Utensils, ShoppingCart, Dog, Dumbbell, Music, Gamepad2, Receipt, Car, Building, PartyPopper, Film, Cat, User as UserIcon } from 'lucide-react';
+import { Bell, MoreVertical, Heart, Users, Home, Plane, Briefcase, Gift, PiggyBank, GraduationCap, Utensils, ShoppingCart, Dog, Dumbbell, Music, Gamepad2, Receipt, Car, Building, PartyPopper, Film, Cat, User as UserIcon, Menu } from 'lucide-react';
 import Avatar from './Avatar';
 import type { User, Notification } from '../types';
 import NotificationDropdown from './NotificationDropdown';
@@ -19,6 +19,7 @@ interface HeaderProps {
     onMarkNotificationAsRead?: (id: string) => void;
     onClearNotifications?: () => void;
     onNavigate?: (view: string) => void;
+    onOpenMobileMenu?: () => void;
 }
 
 const iconMap: { [key: string]: React.ElementType } = {
@@ -77,7 +78,8 @@ export const Header: React.FC<HeaderProps> = ({
     notifications = [],
     onMarkNotificationAsRead,
     onClearNotifications,
-    onNavigate
+    onNavigate,
+    onOpenMobileMenu
 }) => {
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
@@ -103,16 +105,24 @@ export const Header: React.FC<HeaderProps> = ({
 
     return (
         <header className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm transition-colors duration-200 z-20 relative">
-            <div className="flex items-center gap-4">
-                <div className="p-3 bg-gray-100 dark:bg-slate-800 rounded-full shadow-sm">
-                     <Icon className={`w-8 h-8 ${iconColor}`} />
+            <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+                {/* Mobile Menu Button */}
+                <button 
+                    onClick={onOpenMobileMenu}
+                    className="md:hidden p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
+
+                <div className="p-2 md:p-3 bg-gray-100 dark:bg-slate-800 rounded-full shadow-sm flex-shrink-0">
+                     <Icon className={`w-6 h-6 md:w-8 md:h-8 ${iconColor}`} />
                 </div>
-                <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{group.name}</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs md:max-w-md">{memberNames}</p>
+                <div className="overflow-hidden">
+                    <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white truncate">{group.name}</h2>
+                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{memberNames}</p>
                 </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                  <div className="relative" ref={notifRef}>
                     <button 
                         onClick={() => setIsNotifOpen(!isNotifOpen)}
@@ -140,7 +150,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                  )}
                 {/* Display Current User Avatar */}
-                {currentUser && <Avatar user={currentUser} className="w-10 h-10"/>}
+                {currentUser && <Avatar user={currentUser} className="w-8 h-8 md:w-10 md:h-10 ml-1"/>}
             </div>
         </header>
     );

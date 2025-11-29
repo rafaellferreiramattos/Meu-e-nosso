@@ -69,71 +69,68 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transactions, u
     return (
         <section>
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Registro de Despesas</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Registro de Despesas</h2>
                 <button
-                    onClick={onNewTransaction} 
+                    onClick={onNewTransaction}
                     className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105"
                 >
                     <Plus className="w-5 h-5" />
-                    Nova Despesa
+                    <span className="hidden md:inline">Nova Despesa</span>
+                    <span className="md:hidden">Nova</span>
                 </button>
             </div>
+
             <div className="space-y-3">
-                {transactions.length > 0 ? (
-                    transactions.map(tx => {
-                        const payers = tx.payers.map(p => getUserById(p.userId)).filter(Boolean) as User[];
-                        
-                        const totalPaid = tx.payers.reduce((sum, p) => sum + p.amount, 0);
-                        const isPartial = totalPaid < tx.amount - 0.01;
+                {transactions.length === 0 ? (
+                    <div className="text-center py-10 bg-white dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-transparent">
+                        <p className="text-gray-500 dark:text-gray-400">Nenhuma despesa registrada neste grupo.</p>
+                    </div>
+                ) : (
+                    transactions.map(transaction => {
+                        const totalPaid = transaction.payers.reduce((sum, p) => sum + p.amount, 0);
+                        const isPartial = totalPaid < transaction.amount - 0.01;
 
                         return (
-                            <button 
-                                key={tx.id}
-                                onClick={() => onViewTransaction(tx)}
-                                className={`w-full flex items-center p-4 bg-white dark:bg-slate-800/50 rounded-lg text-left transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-slate-800 shadow-sm border ${isPartial ? 'border-amber-400 dark:border-amber-500/50' : 'border-gray-200 dark:border-transparent'}`}
+                            <div 
+                                key={transaction.id} 
+                                onClick={() => onViewTransaction(transaction)}
+                                className={`flex items-center justify-between p-3 md:p-4 rounded-lg bg-white dark:bg-slate-800/50 shadow-sm border cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${isPartial ? 'border-amber-200 dark:border-amber-800' : 'border-gray-200 dark:border-transparent'}`}
                             >
-                                <div className={`p-3 rounded-full mr-4 relative ${categoryColors[tx.category]}`}>
-                                    {categoryIcons[tx.category]}
+                                <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+                                    <div className={`p-2 md:p-3 rounded-full flex-shrink-0 ${categoryColors[transaction.category]}`}>
+                                        {categoryIcons[transaction.category]}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-gray-900 dark:text-white truncate text-sm md:text-base">{transaction.description}</p>
+                                        <div className="flex items-center gap-2 text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                                            <span className="truncate">{new Date(transaction.date).toLocaleDateString('pt-BR')}</span>
+                                            <span className="hidden md:inline">•</span>
+                                            <div className="hidden md:flex items-center gap-1">
+                                                {transaction.payers.map((payer, idx) => {
+                                                    const user = getUserById(payer.userId);
+                                                    return user ? (
+                                                        <span key={idx} className="flex items-center gap-1">
+                                                            {idx > 0 && ", "}
+                                                            <Avatar user={user} className="w-4 h-4 text-[8px]" />
+                                                            {user.name.split(' ')[0]}
+                                                        </span>
+                                                    ) : null;
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end flex-shrink-0 ml-2">
+                                    <p className="font-bold text-gray-900 dark:text-white text-sm md:text-lg">R$ {transaction.amount.toFixed(2).replace('.', ',')}</p>
                                     {isPartial && (
-                                        <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border-2 border-white dark:border-slate-800" title="Pagamento Parcial">
-                                            <Clock className="w-3 h-3 text-white" />
-                                        </div>
+                                        <span className="text-[10px] md:text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+                                            Parcial
+                                        </span>
                                     )}
                                 </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-semibold text-gray-900 dark:text-white">{tx.description}</p>
-                                        {isPartial && <span className="text-[10px] font-bold uppercase bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded">Parcial</span>}
-                                    </div>
-                                    <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                                        Pago por
-                                        <div className="flex items-center -space-x-2">
-                                            {payers.slice(0, 3).map(p => <Avatar key={p.id} user={p} className="w-6 h-6 text-xs border-white dark:border-slate-900" />)}
-                                            {payers.length > 3 && (
-                                                <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-600 flex items-center justify-center text-xs font-bold border-2 border-white dark:border-slate-900 text-gray-700 dark:text-white">
-                                                    +{payers.length - 3}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-lg text-gray-900 dark:text-white">
-                                        R$ {tx.amount.toFixed(2).replace('.', ',')}
-                                    </p>
-                                    {isPartial ? (
-                                         <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Pago: R$ {totalPaid.toFixed(0)}</p>
-                                    ) : (
-                                        <p className="text-sm text-gray-500 dark:text-gray-500">{new Date(tx.date).toLocaleDateString('pt-BR')}</p>
-                                    )}
-                                </div>
-                            </button>
+                            </div>
                         );
                     })
-                ) : (
-                     <div className="bg-white dark:bg-slate-800/50 p-6 rounded-lg text-center text-gray-500 dark:text-gray-400 shadow-sm border border-gray-200 dark:border-transparent">
-                        <p>Nenhuma despesa registrada neste grupo ainda. Clique em "Nova Despesa" para começar!</p>
-                    </div>
                 )}
             </div>
         </section>
