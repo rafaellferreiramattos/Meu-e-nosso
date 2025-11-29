@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MEU&NOSSO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .confetti {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background-color: #f00;
+        opacity: 0.7;
+        animation: fall 5s linear forwards;
+      }
+
+      @keyframes fall {
+        0% {
+          transform: translateY(0vh) rotateZ(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(100vh) rotateZ(720deg);
+          opacity: 0;
+        }
+      }
+      
+      @media print {
+        body {
+            background-color: #ffffff !important;
+        }
+        
+        /* Hide everything by default */
+        body * {
+            visibility: hidden;
+        }
+
+        /* Make the printable area and its children visible */
+        #reports-page-printable, #reports-page-printable * {
+            visibility: visible;
+        }
+
+        /* Position the printable area to the top-left corner */
+        #reports-page-printable {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 2rem;
+        }
+        
+        .print-hidden {
+            display: none !important;
+        }
+        
+        .print-text-black {
+            color: #000000 !important;
+        }
+
+        .print-bg-transparent {
+            background-color: transparent !important;
+        }
+        
+        .print-no-shadow {
+            box-shadow: none !important;
+        }
+        
+        .print-border {
+            border: 1px solid #ccc !important;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.553.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-50 text-slate-900 dark:bg-slate-900 dark:text-white transition-colors duration-200">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
