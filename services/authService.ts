@@ -6,14 +6,45 @@ const USERS_KEY = 'financenter_users';
 const GROUPS_KEY = 'financenter_groups'; // Added to manage local groups
 const CURRENT_USER_KEY = 'financenter_current_user_id';
 
-// Initialize users in local storage if empty
+// Initialize users in local storage if empty, AND ensure mock users exist/are updated
 const initializeUsers = (): User[] => {
-    const storedUsers = localStorage.getItem(USERS_KEY);
-    if (!storedUsers) {
+    const storedUsersJson = localStorage.getItem(USERS_KEY);
+    let storedUsers: User[] = storedUsersJson ? JSON.parse(storedUsersJson) : [];
+
+    // If storage is completely empty, initialize with mock users
+    if (storedUsers.length === 0) {
         localStorage.setItem(USERS_KEY, JSON.stringify(mockUsers));
         return mockUsers;
     }
-    return JSON.parse(storedUsers);
+
+    // SYNC: Ensure mockUsers (like Rafael) always exist with correct credentials in local storage
+    // This fixes login issues on devices that have stale local storage data
+    let hasChanges = false;
+    
+    mockUsers.forEach(mockUser => {
+        // Find if this mock user exists in storage (by ID or Email)
+        const existingIndex = storedUsers.findIndex(u => u.id === mockUser.id || u.email.toLowerCase() === mockUser.email.toLowerCase());
+        
+        if (existingIndex >= 0) {
+            // User exists. Update critical fields (password, name, etc) to match codebase
+            // We use a shallow comparison to see if update is needed to avoid unnecessary writes
+            const stored = storedUsers[existingIndex];
+            if (stored.password !== mockUser.password || stored.email !== mockUser.email || stored.friendId !== mockUser.friendId) {
+                 storedUsers[existingIndex] = { ...stored, ...mockUser }; // Merge to keep user settings but update auth info
+                 hasChanges = true;
+            }
+        } else {
+            // User doesn't exist in storage (e.g. new mock user added to code), add them
+            storedUsers.push(mockUser);
+            hasChanges = true;
+        }
+    });
+
+    if (hasChanges) {
+        localStorage.setItem(USERS_KEY, JSON.stringify(storedUsers));
+    }
+
+    return storedUsers;
 };
 
 // Helper to get local groups
@@ -35,6 +66,7 @@ export const authService = {
 
     login: (email: string, password: string): User | null => {
         const users = initializeUsers();
+        // Strict comparison but ensuring data is fresh
         const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
         
         if (user) {
