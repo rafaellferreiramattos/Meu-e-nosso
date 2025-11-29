@@ -159,12 +159,31 @@ export const authService = {
     // Ensure a personal group exists (for legacy or dev data)
     ensurePersonalGroup: (user: User): Group => {
         const groups = getLocalGroups();
-        const existing = groups.find(g => g.memberIds.length === 1 && g.memberIds.includes(user.id));
+        const canonicalId = `pg-${user.id}`;
         
-        if (existing) return existing;
+        // Find existing canonical group
+        const existingCanonical = groups.find(g => g.id === canonicalId);
+        
+        if (existingCanonical) {
+            // CLEANUP: If there are OTHER personal groups for this user (with diff IDs), remove them now.
+            const duplicateGroups = groups.filter(g => g.memberIds.length === 1 && g.memberIds.includes(user.id) && g.id !== canonicalId);
+            
+            if (duplicateGroups.length > 0) {
+                 const cleanGroups = groups.filter(g => g.memberIds.length > 1 || !g.memberIds.includes(user.id) || g.id === canonicalId);
+                 localStorage.setItem(GROUPS_KEY, JSON.stringify(cleanGroups));
+            }
+            return existingCanonical;
+        }
+
+        // If no canonical group, assume the first personal group found is the one we want (legacy migration)
+        const anyPersonal = groups.find(g => g.memberIds.length === 1 && g.memberIds.includes(user.id));
+        if (anyPersonal) {
+             // Optional: We could migrate its ID here, but for now just returning it is safer.
+             return anyPersonal;
+        }
 
         const newGroup: Group = {
-            id: `pg-${user.id}`,
+            id: canonicalId,
             name: 'Minhas Finanças',
             memberIds: [user.id],
             icon: 'User',

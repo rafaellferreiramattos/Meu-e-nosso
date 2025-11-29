@@ -87,17 +87,25 @@ const App: React.FC = () => {
         if (currentUser) {
             const localGroups = authService.getLocalGroups();
             
-            // Merge mock groups (filtered for user) AND exclude any personal groups from mock data
-            // We want to rely ONLY on authService for the "Minhas Finanças" group to avoid duplication
-            const userMockGroups = mockGroups.filter(g => g.memberIds.includes(currentUser.id) && g.memberIds.length > 1);
+            // 1. Get SHARED groups from Mock Data (multi-member only)
+            const userMockSharedGroups = mockGroups.filter(g => g.memberIds.includes(currentUser.id) && g.memberIds.length > 1);
             
-            // Create a map to avoid duplicates by ID
-            const groupMap = new Map<string, Group>();
-            userMockGroups.forEach(g => groupMap.set(g.id, g));
-            localGroups.forEach(g => groupMap.set(g.id, g));
+            // 2. Get SHARED groups from Local Storage (multi-member only)
+            // We intentionally ignore single-member groups from local storage here to prevent duplicates
+            // The canonical personal group is added in step 3.
+            const userLocalSharedGroups = localGroups.filter(g => g.memberIds.includes(currentUser.id) && g.memberIds.length > 1);
             
-            // Ensure personal group is in the list if not already (safety check)
+            // 3. Get the ONE canonical Personal Group
             const personalGroup = authService.ensurePersonalGroup(currentUser);
+
+            // 4. Combine unique shared groups + the one personal group
+            const groupMap = new Map<string, Group>();
+            
+            // Add shared groups
+            userMockSharedGroups.forEach(g => groupMap.set(g.id, g));
+            userLocalSharedGroups.forEach(g => groupMap.set(g.id, g));
+            
+            // Force set the personal group (this ensures we only have ONE "Minhas Finanças")
             groupMap.set(personalGroup.id, personalGroup);
 
             setGroups(Array.from(groupMap.values()));

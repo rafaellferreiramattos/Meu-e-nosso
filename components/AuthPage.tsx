@@ -11,7 +11,8 @@ interface AuthPageProps {
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     const [isLogin, setIsLogin] = useState(true);
     const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
+    // Initialize email from localStorage if available
+    const [email, setEmail] = useState(() => localStorage.getItem('financenter_saved_email') || '');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -23,6 +24,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         if (isLogin) {
             const user = authService.login(email, password);
             if (user) {
+                // Save email to localStorage on successful login
+                localStorage.setItem('financenter_saved_email', email);
                 onLogin(user);
             } else {
                 setError('Email ou senha incorretos.');
@@ -42,6 +45,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                 if (result === 'email_exists') setError('Este email já está cadastrado.');
                 else setError('Erro ao cadastrar.');
             } else {
+                // Save email to localStorage on successful registration
+                localStorage.setItem('financenter_saved_email', email);
                 onLogin(result);
             }
         }
