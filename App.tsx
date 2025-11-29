@@ -86,8 +86,10 @@ const App: React.FC = () => {
     useEffect(() => {
         if (currentUser) {
             const localGroups = authService.getLocalGroups();
-            // Merge mock groups (filtered for user) and local groups
-            const userMockGroups = mockGroups.filter(g => g.memberIds.includes(currentUser.id));
+            
+            // Merge mock groups (filtered for user) AND exclude any personal groups from mock data
+            // We want to rely ONLY on authService for the "Minhas Finanças" group to avoid duplication
+            const userMockGroups = mockGroups.filter(g => g.memberIds.includes(currentUser.id) && g.memberIds.length > 1);
             
             // Create a map to avoid duplicates by ID
             const groupMap = new Map<string, Group>();

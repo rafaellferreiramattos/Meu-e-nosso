@@ -19,9 +19,7 @@ export const mockUsers: User[] = [
 ];
 
 export const mockGroups: Group[] = [
-    { id: 'g1', name: 'J & R', memberIds: ['u1', 'u2'], icon: 'Heart' },
-    // Add a personal group for Rafael for demonstration
-    { id: 'pg-u2', name: 'Minhas Finanças', memberIds: ['u2'], icon: 'User' }
+    { id: 'g1', name: 'J & R', memberIds: ['u1', 'u2'], icon: 'Heart' }
 ];
 
 export const mockTransactions: Transaction[] = [
