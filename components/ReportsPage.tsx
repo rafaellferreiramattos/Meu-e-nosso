@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Transaction, User } from '../types';
 import { BarChart2, Crown, Share2, FileDown, FileText, TrendingUp, Receipt, Hash, ArrowUpRight, ArrowDownRight, AlertCircle } from 'lucide-react';
@@ -281,7 +280,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ groupName, transactions, memb
                                     <div className="flex items-center justify-between text-sm z-10 relative mb-1">
                                         <div className="flex items-center gap-2">
                                             <div className={`p-1.5 rounded-full bg-opacity-20 ${categoryColors[category].split(' ')[0].replace('text-', 'bg-')}`}>
-                                                {React.cloneElement(categoryIcons[category] as React.ReactElement, { className: "w-3 h-3" })}
+                                                {React.cloneElement(categoryIcons[category] as React.ReactElement<{ className?: string }>, { className: "w-3 h-3" })}
                                             </div>
                                             <span className="font-medium text-gray-700 dark:text-gray-200 capitalize">{categoryNameMap[category]}</span>
                                         </div>

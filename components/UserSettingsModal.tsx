@@ -1,7 +1,7 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '../types';
-import { X, Save, Lock, User as UserIcon, Sun, Moon, Trash2, Palette, Camera, Globe, QrCode, Bell, Phone } from 'lucide-react';
+import { X, Save, Lock, User as UserIcon, Sun, Moon, Trash2, Palette, Camera, Globe, QrCode, Bell, Phone, Check, RotateCcw } from 'lucide-react';
 import Avatar from './Avatar';
 
 interface UserSettingsModalProps {
@@ -25,6 +25,13 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ user, onClose, on
     const [pixKey, setPixKey] = useState(user.pixKey || '');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Image Cropping State
+    const [editImage, setEditImage] = useState<string | null>(null);
+    const [zoom, setZoom] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const imageRef = useRef<HTMLImageElement | null>(null);
+
     // Notification Settings State
     const [notifSettings, setNotifSettings] = useState(user.notificationSettings || {
         email: true,
@@ -41,17 +48,80 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ user, onClose, on
     const [passwordError, setPasswordError] = useState('');
     const [passwordSuccess, setPasswordSuccess] = useState('');
 
-    // Photo Upload Handler
+    // Photo Upload Handler - Starts Editing Mode
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setAvatarUrl(reader.result as string);
+                setEditImage(reader.result as string);
+                setZoom(1);
+                setPosition({ x: 0, y: 0 });
             };
             reader.readAsDataURL(file);
         }
     };
+    
+    // Draw image on canvas for cropping preview
+    useEffect(() => {
+        if (!editImage || !canvasRef.current) return;
+        
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        const image = new Image();
+        image.src = editImage;
+        image.onload = () => {
+            imageRef.current = image;
+            drawCanvas();
+        };
+    }, [editImage]);
+
+    // Redraw on zoom/pan changes
+    useEffect(() => {
+        drawCanvas();
+    }, [zoom, position]);
+
+    const drawCanvas = () => {
+        if (!canvasRef.current || !imageRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        const size = 250; // Canvas size
+        canvas.width = size;
+        canvas.height = size;
+        
+        ctx.clearRect(0, 0, size, size);
+        
+        // Circular Clipping
+        ctx.beginPath();
+        ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+        ctx.clip();
+        
+        // Draw Image
+        const img = imageRef.current;
+        // Calculate dimensions to cover
+        const scale = Math.max(size / img.width, size / img.height) * zoom;
+        const x = (size - img.width * scale) / 2 + position.x;
+        const y = (size - img.height * scale) / 2 + position.y;
+        
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+    }
+    
+    const handleSaveCrop = () => {
+         if (canvasRef.current) {
+             const croppedDataUrl = canvasRef.current.toDataURL('image/jpeg', 0.8);
+             setAvatarUrl(croppedDataUrl);
+             setEditImage(null);
+         }
+    };
+
+    const handleCancelCrop = () => {
+        setEditImage(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
 
     // Phone Mask Handler (Only for the Phone field, NOT Pix Key)
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -229,7 +299,72 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ user, onClose, on
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 p-6 md:p-8 overflow-y-auto bg-white dark:bg-slate-800">
+                <div className="flex-1 p-6 md:p-8 overflow-y-auto bg-white dark:bg-slate-800 relative">
+                    {/* Image Editor Overlay */}
+                    {editImage && (
+                        <div className="absolute inset-0 bg-white dark:bg-slate-800 z-10 flex flex-col items-center justify-center p-6">
+                            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Ajustar Foto</h3>
+                            <div className="relative border-4 border-gray-200 dark:border-slate-600 rounded-full overflow-hidden shadow-lg mb-6 w-[250px] h-[250px] bg-black">
+                                <canvas ref={canvasRef} className="w-full h-full object-cover" />
+                            </div>
+                            
+                            <div className="w-full max-w-xs space-y-4 mb-6">
+                                <div>
+                                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Zoom</label>
+                                    <input 
+                                        type="range" 
+                                        min="1" 
+                                        max="3" 
+                                        step="0.1" 
+                                        value={zoom} 
+                                        onChange={(e) => setZoom(parseFloat(e.target.value))}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                     <div>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Mover Horizontal</label>
+                                        <input 
+                                            type="range" 
+                                            min="-150" 
+                                            max="150" 
+                                            value={position.x} 
+                                            onChange={(e) => setPosition(prev => ({ ...prev, x: parseInt(e.target.value) }))}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Mover Vertical</label>
+                                        <input 
+                                            type="range" 
+                                            min="-150" 
+                                            max="150" 
+                                            value={position.y} 
+                                            onChange={(e) => setPosition(prev => ({ ...prev, y: parseInt(e.target.value) }))}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={handleCancelCrop}
+                                    className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white font-medium flex items-center gap-2"
+                                >
+                                    <RotateCcw className="w-4 h-4" /> Cancelar
+                                </button>
+                                <button 
+                                    onClick={handleSaveCrop}
+                                    className="px-6 py-2 rounded-lg bg-teal-600 text-white font-medium flex items-center gap-2 shadow-lg"
+                                >
+                                    <Check className="w-4 h-4" /> Cortar e Salvar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                             {getTabTitle()}

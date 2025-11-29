@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { User, Transaction, Group } from '../types';
 import { X } from 'lucide-react';
@@ -26,7 +25,8 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ group, onClose, onAdd
         onAddExpense({
             description,
             amount: numericAmount,
-            paidById,
+            payers: [{ userId: paidById, amount: numericAmount }],
+            participantIds: group.members.map(m => m.id),
             groupId: group.id,
             date: new Date().toISOString(),
             category

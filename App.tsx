@@ -647,6 +647,7 @@ const App: React.FC = () => {
             <main className="flex-1 flex flex-col overflow-hidden">
                 <Header 
                     group={selectedGroup} 
+                    currentUser={currentUser}
                     onOpenSettings={() => setIsGroupSettingsModalOpen(true)}
                     showSettings={activeView === 'Dashboard' && !isPersonalGroup}
                     notifications={allNotifications}

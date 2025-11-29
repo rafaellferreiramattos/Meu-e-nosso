@@ -12,6 +12,7 @@ interface HeaderProps {
         icon: string;
         members: User[];
     };
+    currentUser: User | null;
     onOpenSettings: () => void;
     showSettings?: boolean;
     notifications?: Notification[];
@@ -70,6 +71,7 @@ const iconColorMap: { [key: string]: string } = {
 
 export const Header: React.FC<HeaderProps> = ({ 
     group, 
+    currentUser,
     onOpenSettings, 
     showSettings = true,
     notifications = [],
@@ -137,7 +139,8 @@ export const Header: React.FC<HeaderProps> = ({
                         <MoreVertical className="w-6 h-6 text-gray-400"/>
                     </button>
                  )}
-                <Avatar user={group.members[0]} className="w-10 h-10"/>
+                {/* Display Current User Avatar */}
+                {currentUser && <Avatar user={currentUser} className="w-10 h-10"/>}
             </div>
         </header>
     );
