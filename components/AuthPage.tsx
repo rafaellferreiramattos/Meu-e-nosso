@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { authService } from '../services/authService';
 import type { User } from '../types';
-import { LogIn, UserPlus, ArrowRight, AtSign, HandCoins } from 'lucide-react';
+import { LogIn, UserPlus, ArrowRight, AtSign, HandCoins, Loader2 } from 'lucide-react';
 
 interface AuthPageProps {
     onLogin: (user: User) => void;
@@ -11,44 +11,52 @@ interface AuthPageProps {
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     const [isLogin, setIsLogin] = useState(true);
     const [name, setName] = useState('');
-    // Initialize email from localStorage if available
     const [email, setEmail] = useState(() => localStorage.getItem('financenter_saved_email') || '');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setIsLoading(true);
 
-        if (isLogin) {
-            const user = authService.login(email, password);
-            if (user) {
-                // Save email to localStorage on successful login
-                localStorage.setItem('financenter_saved_email', email);
-                onLogin(user);
+        try {
+            if (isLogin) {
+                const { user, error: loginError } = await authService.login(email, password);
+                if (user) {
+                    localStorage.setItem('financenter_saved_email', email);
+                    onLogin(user);
+                } else {
+                    setError(loginError || 'Email ou senha incorretos.');
+                }
             } else {
-                setError('Email ou senha incorretos.');
-            }
-        } else {
-            if (!name || !email || !password || !confirmPassword) {
-                setError('Por favor, preencha todos os campos.');
-                return;
-            }
-            if (password !== confirmPassword) {
-                setError('As senhas não coincidem.');
-                return;
-            }
+                if (!name || !email || !password || !confirmPassword) {
+                    setError('Por favor, preencha todos os campos.');
+                    setIsLoading(false);
+                    return;
+                }
+                if (password !== confirmPassword) {
+                    setError('As senhas não coincidem.');
+                    setIsLoading(false);
+                    return;
+                }
 
-            const result = authService.register(name, email, password);
-            if (typeof result === 'string') {
-                if (result === 'email_exists') setError('Este email já está cadastrado.');
-                else setError('Erro ao cadastrar.');
-            } else {
-                // Save email to localStorage on successful registration
-                localStorage.setItem('financenter_saved_email', email);
-                onLogin(result);
+                const { user, error: regError } = await authService.register(name, email, password);
+                
+                if (regError) {
+                    if (regError === 'email_exists') setError('Este email já está cadastrado.');
+                    else setError(regError);
+                } else if (user) {
+                    localStorage.setItem('financenter_saved_email', email);
+                    onLogin(user);
+                }
             }
+        } catch (err) {
+            setError('Erro inesperado. Tente novamente.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -89,6 +97,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                                     onChange={(e) => setName(e.target.value)}
                                     className="w-full bg-slate-700 border border-slate-600 rounded-lg py-3 px-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                                     placeholder="Seu nome"
+                                    disabled={isLoading}
                                 />
                             </div>
                         )}
@@ -101,6 +110,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-slate-700 border border-slate-600 rounded-lg py-3 px-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                                 placeholder="seu@email.com"
+                                disabled={isLoading}
                             />
                         </div>
 
@@ -112,6 +122,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full bg-slate-700 border border-slate-600 rounded-lg py-3 px-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                                 placeholder="••••••••"
+                                disabled={isLoading}
                             />
                         </div>
 
@@ -124,6 +135,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     className="w-full bg-slate-700 border border-slate-600 rounded-lg py-3 px-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                                     placeholder="••••••••"
+                                    disabled={isLoading}
                                 />
                             </div>
                         )}
@@ -137,10 +149,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
                         <button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-teal-500/20 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                            disabled={isLoading}
+                            className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-teal-500/20 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            {isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
-                            {isLogin ? 'Entrar no App' : 'Criar Conta'}
+                            {isLoading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />
+                            )}
+                            {isLoading ? 'Processando...' : (isLogin ? 'Entrar no App' : 'Criar Conta')}
                         </button>
                     </form>
                 </div>
