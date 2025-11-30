@@ -49,8 +49,6 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
     // Helper simplificado e robusto para Vite/Vercel
     const getApiKey = (): string => {
         let key = '';
-        
-        // 1. Tenta via Vite (Padrão moderno)
         try {
             // @ts-ignore
             if (import.meta && import.meta.env && import.meta.env.VITE_API_KEY) {
@@ -59,22 +57,18 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             }
         } catch (e) { console.log('Vite check failed'); }
 
-        // 2. Se falhar, tenta via variável global (Create React App / Legado)
         if (!key && typeof process !== 'undefined' && process.env) {
             if (process.env.REACT_APP_API_KEY) key = process.env.REACT_APP_API_KEY;
-            if (process.env.API_KEY) key = process.env.API_KEY; // Menos comum no browser
+            if (process.env.API_KEY) key = process.env.API_KEY; 
         }
-
         return key;
     };
 
-    // Verifica o status da chave ao carregar
     useEffect(() => {
         const key = getApiKey();
         setKeyStatus(key ? 'found' : 'missing');
     }, []);
 
-    // Prepare context data for the AI
     const getFinancialContext = () => {
         const totalSpent = transactions.reduce((acc, t) => acc + t.amount, 0);
         
@@ -137,16 +131,20 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const ai = new GoogleGenAI({ apiKey: apiKey });
             const context = getFinancialContext();
             
+            // SYSTEM INSTRUCTION ATUALIZADA PARA ORTOGRAFIA CORRETA
             const systemInstruction = `
-                Você é um consultor financeiro pessoal, amigável e especialista em economia doméstica.
+                Você é um consultor financeiro pessoal experiente e sofisticado.
                 
                 CONTEXTO FINANCEIRO (JSON):
                 ${context}
                 
-                REGRAS:
-                1. Responda em Português do Brasil.
-                2. NÃO USE MARKDOWN (sem **, #, _). Use apenas emojis e quebras de linha.
-                3. Seja direto e útil.
+                REGRAS ESTRITAS DE FORMATAÇÃO E LINGUAGEM:
+                1. Use Português do Brasil culto, formal e gramaticalmente impecável. Verifique acentuação e concordância.
+                2. PROIBIDO USAR MARKDOWN para negrito ou itálico (não use asteriscos como ** ou *).
+                3. Para destacar valores ou termos importantes, use aspas ou coloque o valor em uma nova linha.
+                4. Use listas com hífens (-) para organizar tópicos.
+                5. Use emojis moderadamente para tornar a leitura agradável.
+                6. Seja direto, educado e ofereça conselhos práticos baseados nos números.
             `;
 
             const response = await ai.models.generateContent({
@@ -160,7 +158,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const modelMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: response.text || "Sem resposta.",
+                text: response.text || "Não consegui gerar uma resposta. Tente novamente.",
                 timestamp: new Date()
             };
 
@@ -175,7 +173,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: `❌ ERRO TÉCNICO:\n${errorDetails}\n\nSe o erro for 403, sua chave tem restrições de domínio incorretas no Google Cloud. Se for 404, o modelo não existe.`,
+                text: `❌ Erro ao processar:\n${errorDetails}`,
                 timestamp: new Date(),
                 isError: true
             };
@@ -186,7 +184,8 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
     };
 
     const handleAnalyzeNow = () => {
-        handleSendMessage("Faça uma análise rápida das finanças e me dê uma dica.");
+        if (isLoading) return;
+        handleSendMessage("Por favor, faça uma análise detalhada e gramaticalmente correta das finanças atuais e sugira melhorias.");
     };
 
     return (
@@ -195,9 +194,9 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             {/* Debug/Status Bar - VISÍVEL APENAS SE DER ERRO OU EM DESENVOLVIMENTO */}
             <div className={`text-xs p-2 text-center font-bold flex items-center justify-center gap-2 ${keyStatus === 'found' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
                 {keyStatus === 'found' ? (
-                    <><ShieldCheck className="w-4 h-4" /> API Key Configurada (Pronto para Uso)</>
+                    <><ShieldCheck className="w-4 h-4" /> IA Conectada</>
                 ) : (
-                    <><ShieldAlert className="w-4 h-4" /> API Key Ausente (Configure VITE_API_KEY na Vercel)</>
+                    <><ShieldAlert className="w-4 h-4" /> Chave API Ausente (IA Indisponível)</>
                 )}
             </div>
 
@@ -209,16 +208,16 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Assistente IA</h2>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Powered by Gemini</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Consultor Financeiro</p>
                     </div>
                 </div>
                 <button 
                     onClick={handleAnalyzeNow}
-                    disabled={isLoading}
-                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 text-sm font-semibold rounded-lg hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors disabled:opacity-50"
+                    disabled={isLoading || keyStatus === 'missing'}
+                    className="hidden md:flex items-center gap-2 px-4 py-2 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 text-sm font-semibold rounded-lg hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    Análise
+                    Análise Completa
                 </button>
             </div>
 
@@ -253,7 +252,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
                         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-200 dark:border-slate-700">
                             <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Conectando...
+                                Analisando finanças...
                             </div>
                         </div>
                     </div>

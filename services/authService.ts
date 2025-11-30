@@ -13,27 +13,35 @@ const CURRENT_USER_KEY = 'financenter_current_user_id';
 const getLocalUsers = (): User[] => {
     const storedUsersJson = localStorage.getItem(USERS_KEY);
     let storedUsers: User[] = storedUsersJson ? JSON.parse(storedUsersJson) : [];
-    if (storedUsers.length === 0) {
-        localStorage.setItem(USERS_KEY, JSON.stringify(mockUsers));
-        return mockUsers;
-    }
-    // Sync Mock Users logic (kept for consistency)
+    
+    // GUARANTEE MOCK USERS EXIST (Critical for testing on new devices like mobile)
     let hasChanges = false;
-    mockUsers.forEach(mockUser => {
-        const existingIndex = storedUsers.findIndex(u => u.id === mockUser.id || u.email.toLowerCase() === mockUser.email.toLowerCase());
-        if (existingIndex >= 0) {
-             // Mock users are updated if code changes
-             const stored = storedUsers[existingIndex];
-             if (stored.password !== mockUser.password || stored.email !== mockUser.email) {
-                 storedUsers[existingIndex] = { ...stored, ...mockUser };
-                 hasChanges = true;
+    
+    if (storedUsers.length === 0) {
+        storedUsers = [...mockUsers];
+        hasChanges = true;
+    } else {
+        // Ensure standard test users (like Rafael) are always present and up to date
+        mockUsers.forEach(mockUser => {
+            const index = storedUsers.findIndex(u => u.email.toLowerCase() === mockUser.email.toLowerCase());
+            if (index === -1) {
+                // User doesn't exist, add them
+                storedUsers.push(mockUser);
+                hasChanges = true;
+            } else {
+                // User exists, ensure password matches test credentials (in case it was corrupted)
+                if (storedUsers[index].password !== mockUser.password) {
+                    storedUsers[index].password = mockUser.password;
+                    hasChanges = true;
+                }
             }
-        } else {
-            storedUsers.push(mockUser);
-            hasChanges = true;
-        }
-    });
-    if (hasChanges) localStorage.setItem(USERS_KEY, JSON.stringify(storedUsers));
+        });
+    }
+
+    if (hasChanges) {
+        localStorage.setItem(USERS_KEY, JSON.stringify(storedUsers));
+    }
+    
     return storedUsers;
 };
 
@@ -53,12 +61,7 @@ const saveLocalGroup = (group: Group) => {
 // ==========================================
 
 export const authService = {
-    // Agora retorna uma Promise, pois pode vir da internet
     getAllUsers: async (): Promise<User[]> => {
-        // Se tivéssemos uma tabela 'profiles' pública no Supabase, buscaríamos aqui.
-        // Por enquanto, para garantir que as funcionalidades de grupo funcionem sem setup complexo de SQL,
-        // retornamos os usuários locais + mockados.
-        // Idealmente, no futuro, isso faria: const { data } = await supabase.from('profiles').select('*');
         return getLocalUsers();
     },
 
@@ -71,9 +74,7 @@ export const authService = {
                     password,
                 });
 
-                if (error) return { user: null, error: error.message };
                 if (data.user) {
-                    // Mapeia usuário do Supabase para nosso tipo User
                     const metadata = data.user.user_metadata || {};
                     const user: User = {
                         id: data.user.id,
@@ -89,13 +90,14 @@ export const authService = {
                     };
                     return { user };
                 }
+                // Don't return error immediately, try local fallback for test users
+                console.warn("Supabase login failed, trying local fallback:", error?.message);
             } catch (err) {
-                console.error("Supabase login error:", err);
+                console.error("Supabase connection error:", err);
             }
         }
 
-        // 2. Fallback para LocalStorage (Offline / Sem chaves configuradas)
-        console.warn("Usando login local (fallback). Configure Supabase para login real.");
+        // 2. Fallback para LocalStorage (Offline / Test Users)
         const users = getLocalUsers();
         const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
         
@@ -103,11 +105,11 @@ export const authService = {
             localStorage.setItem(CURRENT_USER_KEY, user.id);
             return { user };
         }
-        return { user: null, error: 'Email ou senha incorretos (Local).' };
+        
+        return { user: null, error: 'Email ou senha incorretos.' };
     },
 
     register: async (name: string, email: string, password: string): Promise<{ user: User | null, error?: string }> => {
-        // Gerar dados auxiliares (FriendID, Cor, etc)
         const firstName = name.trim().split(' ')[0];
         const randomNum = Math.floor(1000 + Math.random() * 9000);
         const uniqueFriendId = `${firstName}#${randomNum}`;
@@ -148,11 +150,7 @@ export const authService = {
                         bgColor: bgColor,
                         notificationSettings
                     };
-                    
-                    // Cria grupo pessoal no localStorage para compatibilidade imediata
-                    // (Em produção real, isso iria para uma tabela 'groups' no Supabase)
                     authService.ensurePersonalGroup(newUser);
-                    
                     return { user: newUser };
                 }
             } catch (err) {
@@ -174,8 +172,6 @@ export const authService = {
         const updatedUsers = [...users, newUser];
         localStorage.setItem(USERS_KEY, JSON.stringify(updatedUsers));
         localStorage.setItem(CURRENT_USER_KEY, newUser.id);
-        
-        // Setup Personal Group
         authService.ensurePersonalGroup(newUser);
 
         return { user: newUser };
@@ -217,12 +213,10 @@ export const authService = {
     },
 
     updateUser: async (updatedUser: User) => {
-        // Atualiza Local
         const users = getLocalUsers();
         const newUsers = users.map(u => u.id === updatedUser.id ? updatedUser : u);
         localStorage.setItem(USERS_KEY, JSON.stringify(newUsers));
 
-        // Atualiza Supabase (Metadados)
         if (supabase) {
             await supabase.auth.updateUser({
                 data: {
@@ -232,14 +226,12 @@ export const authService = {
                     pixKey: updatedUser.pixKey,
                     notificationSettings: updatedUser.notificationSettings,
                     initials: updatedUser.initials
-                    // FriendID geralmente não muda
                 }
             });
         }
     },
 
     deleteUser: async (userId: string) => {
-        // Local cleanup
         const users = getLocalUsers();
         const newUsers = users.filter(u => u.id !== userId);
         localStorage.setItem(USERS_KEY, JSON.stringify(newUsers));
@@ -252,8 +244,6 @@ export const authService = {
         })).filter(g => g.memberIds.length > 0);
         localStorage.setItem(GROUPS_KEY, JSON.stringify(updatedGroups));
 
-        // Supabase cleanup (In a real app, uses Admin API, but user can delete themselves generally via specific RPC or logic)
-        // Here we just sign out as we can't easily delete user from client side without specific policies
         if (supabase) await supabase.auth.signOut();
     },
 
@@ -266,23 +256,21 @@ export const authService = {
         const canonicalId = `pg-${user.id}`;
         const existingCanonical = groups.find(g => g.id === canonicalId);
         if (existingCanonical) {
-            const duplicateGroups = groups.filter(g => g.memberIds.length === 1 && g.memberIds.includes(user.id) && g.id !== canonicalId);
-            if (duplicateGroups.length > 0) {
-                 const cleanGroups = groups.filter(g => g.memberIds.length > 1 || !g.memberIds.includes(user.id) || g.id === canonicalId);
-                 localStorage.setItem(GROUPS_KEY, JSON.stringify(cleanGroups));
-            }
             return existingCanonical;
         }
-        const anyPersonal = groups.find(g => g.memberIds.length === 1 && g.memberIds.includes(user.id));
-        if (anyPersonal) return anyPersonal;
-
+        
+        // Cleanup old personal groups
+        const cleanGroups = groups.filter(g => !(g.memberIds.length === 1 && g.memberIds.includes(user.id)));
+        
         const newGroup: Group = {
             id: canonicalId,
             name: 'Minhas Finanças',
             memberIds: [user.id],
             icon: 'User',
         };
-        saveLocalGroup(newGroup);
+        
+        cleanGroups.push(newGroup);
+        localStorage.setItem(GROUPS_KEY, JSON.stringify(cleanGroups));
         return newGroup;
     }
 };
