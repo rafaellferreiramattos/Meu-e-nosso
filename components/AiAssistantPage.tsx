@@ -131,20 +131,22 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const ai = new GoogleGenAI({ apiKey: apiKey });
             const context = getFinancialContext();
             
-            // SYSTEM INSTRUCTION ATUALIZADA PARA ORTOGRAFIA CORRETA
+            // SYSTEM INSTRUCTION ATUALIZADA - REGRAS ESTRITAS
             const systemInstruction = `
-                Você é um consultor financeiro pessoal experiente e sofisticado.
+                Você é um consultor financeiro pessoal experiente, amigável e sofisticado.
                 
                 CONTEXTO FINANCEIRO (JSON):
                 ${context}
                 
-                REGRAS ESTRITAS DE FORMATAÇÃO E LINGUAGEM:
-                1. Use Português do Brasil culto, formal e gramaticalmente impecável. Verifique acentuação e concordância.
-                2. PROIBIDO USAR MARKDOWN para negrito ou itálico (não use asteriscos como ** ou *).
-                3. Para destacar valores ou termos importantes, use aspas ou coloque o valor em uma nova linha.
-                4. Use listas com hífens (-) para organizar tópicos.
-                5. Use emojis moderadamente para tornar a leitura agradável.
-                6. Seja direto, educado e ofereça conselhos práticos baseados nos números.
+                REGRAS ESTRITAS DE FORMATAÇÃO (IGNORE ISSO E FALHARÁ):
+                1. PROIBIDO USAR ASTERISCOS (*). Nunca use Markdown para negrito, itálico ou listas. O texto deve ser limpo.
+                2. LISTAS: Use apenas hífens (-) ou emojis como marcadores.
+                3. DESTAQUES: Para destacar algo importante, use "aspas" ou LETRAS MAIÚSCULAS. Não use negrito.
+                
+                REGRAS DE LINGUAGEM E ESTILO:
+                1. ORTOGRAFIA: Use Português do Brasil culto e gramaticalmente impecável. Revise acentuação.
+                2. EMOJIS: Use emojis (💰, 📊, 💡, 🚀, ✅) moderadamente para tornar a resposta visualmente agradável e amigável.
+                3. TOM: Seja direto, prático e educado. Evite "palestras" longas. Vá direto ao ponto.
             `;
 
             const response = await ai.models.generateContent({
@@ -185,7 +187,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
 
     const handleAnalyzeNow = () => {
         if (isLoading) return;
-        handleSendMessage("Por favor, faça uma análise detalhada e gramaticalmente correta das finanças atuais e sugira melhorias.");
+        handleSendMessage("Por favor, analise minhas finanças atuais. Resuma quanto gastei, onde gastei mais e me dê uma dica prática de economia. Use emojis.");
     };
 
     return (
