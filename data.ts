@@ -84,4 +84,6 @@ export const mockInvitations: Invitation[] = [
     { id: 'inv1', fromUserId: 'u5', toUserId: 'u1', status: 'pending', date: new Date().toISOString() },
     { id: 'inv2', fromUserId: 'u1', toUserId: 'u6', status: 'pending', date: new Date().toISOString() },
     { id: 'inv3', fromUserId: 'u2', toUserId: 'u3', status: 'accepted', date: '2025-11-10T10:00:00Z' },
+    // Adicionando convite aceito entre Rafael (u2) e Joana (u1) para a demonstração
+    { id: 'inv_demo_joana', fromUserId: 'u2', toUserId: 'u1', status: 'accepted', date: new Date().toISOString() },
 ];
