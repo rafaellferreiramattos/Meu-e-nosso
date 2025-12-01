@@ -60,7 +60,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             if (process.env.REACT_APP_API_KEY) key = process.env.REACT_APP_API_KEY;
             if (process.env.API_KEY) key = process.env.API_KEY; 
         }
-        return key ? key.trim() : ''; // TRIM remove espaços vazios que quebram a chave
+        return key ? key.trim() : '';
     };
 
     useEffect(() => {
@@ -98,7 +98,8 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
     };
 
     const handleSendMessage = async (text: string = input) => {
-        if (!text.trim() && !input.trim()) return;
+        // Validation: Ensure text is not empty/whitespace
+        if (!text || !text.trim()) return;
         
         const apiKey = getApiKey();
 
@@ -117,7 +118,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: "⚠️ Chave de API não encontrada no código (VITE_API_KEY).",
+                text: "⚠️ Chave de API não encontrada (VITE_API_KEY). Configure na Vercel ou .env.",
                 timestamp: new Date(),
                 isError: true
             };
@@ -147,23 +148,30 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
                 3. Seja direto e prático. Dê conselhos acionáveis.
             `;
 
-            // Tente usar o modelo padrão primeiro, se falhar, o catch pegará
+            // Validar histórico antes de enviar
+            const validHistory = messages
+                .filter(m => !m.isError && m.id !== 'intro' && m.text && m.text.trim().length > 0)
+                .map(m => ({
+                    role: m.role,
+                    parts: [{ text: m.text }]
+                }));
+
             const chat = ai.chats.create({
                 model: 'gemini-2.5-flash',
                 config: { systemInstruction },
-                history: messages.filter(m => !m.isError && m.id !== 'intro').map(m => ({
-                    role: m.role,
-                    parts: [{ text: m.text }]
-                }))
+                history: validHistory
             });
 
-            const result = await chat.sendMessage(text);
-            const responseText = result.response.text();
+            // FIX: Pass object with 'message' property, not string directly
+            const result = await chat.sendMessage({ message: text });
+            
+            // FIX: Access .text directly from response
+            const responseText = result.text; 
 
             const modelMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: responseText,
+                text: responseText || "Não consegui gerar uma resposta.",
                 timestamp: new Date()
             };
 
@@ -174,19 +182,19 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             
             let errorMsg = "Ocorreu um erro desconhecido.";
             if (error.message) errorMsg = error.message;
-            if (error.status) errorMsg = `Erro ${error.status}: ${error.statusText || error.message}`;
             
-            // Tratamento amigável para erros comuns
             if (errorMsg.includes("403") || errorMsg.includes("PERMISSION_DENIED")) {
-                errorMsg = "Erro 403 (Permissão Negada): Sua chave de API pode estar inválida, bloqueada ou restringida para este domínio.";
+                errorMsg = "Erro 403: Chave de API inválida ou domínio não permitido.";
             } else if (errorMsg.includes("404") || errorMsg.includes("NOT_FOUND")) {
-                errorMsg = "Erro 404: Modelo de IA indisponível ou chave incorreta.";
+                errorMsg = "Erro 404: Modelo indisponível.";
+            } else if (errorMsg.includes("ContentUnion")) {
+                errorMsg = "Erro interno: Formato da mensagem inválido.";
             }
 
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: `❌ Falha na conexão com a IA.\n\nDetalhes técnicos: ${errorMsg}`,
+                text: `❌ Falha na conexão com a IA.\n\n${errorMsg}`,
                 timestamp: new Date(),
                 isError: true
             };
@@ -205,7 +213,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
         <div className="flex flex-col h-full bg-gray-50 dark:bg-slate-900 rounded-lg overflow-hidden relative">
             <div className={`text-xs p-2 text-center font-bold flex items-center justify-center gap-2 ${keyStatus === 'found' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
                 {keyStatus === 'found' ? (
-                    <><ShieldCheck className="w-4 h-4" /> IA Conectada (Chave Detectada)</>
+                    <><ShieldCheck className="w-4 h-4" /> IA Conectada</>
                 ) : (
                     <><ShieldAlert className="w-4 h-4" /> Chave API Ausente (IA Indisponível)</>
                 )}
