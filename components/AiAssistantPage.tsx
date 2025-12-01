@@ -50,7 +50,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
         let key = '';
         try {
             // @ts-ignore
-            if (import.meta && import.meta.env && import.meta.env.VITE_API_KEY) {
+            if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
                 // @ts-ignore
                 key = import.meta.env.VITE_API_KEY;
             }
@@ -60,7 +60,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             if (process.env.REACT_APP_API_KEY) key = process.env.REACT_APP_API_KEY;
             if (process.env.API_KEY) key = process.env.API_KEY; 
         }
-        return key;
+        return key ? key.trim() : ''; // TRIM remove espaços vazios que quebram a chave
     };
 
     useEffect(() => {
@@ -117,7 +117,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: "⚠️ Chave de API não encontrada. Configure a VITE_API_KEY na Vercel.",
+                text: "⚠️ Chave de API não encontrada no código (VITE_API_KEY).",
                 timestamp: new Date(),
                 isError: true
             };
@@ -130,7 +130,6 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const ai = new GoogleGenAI({ apiKey: apiKey });
             const context = getFinancialContext();
             
-            // SYSTEM INSTRUCTION ATUALIZADA - REGRAS ESTRITAS
             const systemInstruction = `
                 Você é um consultor financeiro pessoal experiente e amigável.
                 
@@ -148,6 +147,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
                 3. Seja direto e prático. Dê conselhos acionáveis.
             `;
 
+            // Tente usar o modelo padrão primeiro, se falhar, o catch pegará
             const chat = ai.chats.create({
                 model: 'gemini-2.5-flash',
                 config: { systemInstruction },
@@ -170,11 +170,23 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             setMessages(prev => [...prev, modelMessage]);
 
         } catch (error: any) {
-            console.error("Erro na IA:", error);
+            console.error("Erro na IA Detalhado:", error);
+            
+            let errorMsg = "Ocorreu um erro desconhecido.";
+            if (error.message) errorMsg = error.message;
+            if (error.status) errorMsg = `Erro ${error.status}: ${error.statusText || error.message}`;
+            
+            // Tratamento amigável para erros comuns
+            if (errorMsg.includes("403") || errorMsg.includes("PERMISSION_DENIED")) {
+                errorMsg = "Erro 403 (Permissão Negada): Sua chave de API pode estar inválida, bloqueada ou restringida para este domínio.";
+            } else if (errorMsg.includes("404") || errorMsg.includes("NOT_FOUND")) {
+                errorMsg = "Erro 404: Modelo de IA indisponível ou chave incorreta.";
+            }
+
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: "Desculpe, tive um problema ao conectar com minha inteligência. Tente novamente mais tarde.",
+                text: `❌ Falha na conexão com a IA.\n\nDetalhes técnicos: ${errorMsg}`,
                 timestamp: new Date(),
                 isError: true
             };
@@ -193,7 +205,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
         <div className="flex flex-col h-full bg-gray-50 dark:bg-slate-900 rounded-lg overflow-hidden relative">
             <div className={`text-xs p-2 text-center font-bold flex items-center justify-center gap-2 ${keyStatus === 'found' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
                 {keyStatus === 'found' ? (
-                    <><ShieldCheck className="w-4 h-4" /> IA Conectada</>
+                    <><ShieldCheck className="w-4 h-4" /> IA Conectada (Chave Detectada)</>
                 ) : (
                     <><ShieldAlert className="w-4 h-4" /> Chave API Ausente (IA Indisponível)</>
                 )}
