@@ -25,7 +25,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
         {
             id: 'intro',
             role: 'model',
-            text: `Olá, ${currentUser.name}! Sou seu assistente financeiro inteligente. Posso analisar os gastos do grupo "${group.name}", sugerir onde economizar ou ajudar a planejar suas metas. Como posso ajudar hoje?`,
+            text: `Olá, ${currentUser.name}! Sou seu assistente financeiro. Posso analisar os gastos do grupo "${group.name}", sugerir economias ou ajudar com metas. Como posso ajudar?`,
             timestamp: new Date()
         }
     ]);
@@ -46,7 +46,6 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
         return `R$ ${value.toFixed(2).replace('.', ',')}`;
     };
 
-    // Helper simplificado e robusto para Vite/Vercel
     const getApiKey = (): string => {
         let key = '';
         try {
@@ -118,7 +117,7 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: "⚠️ CONFIGURAÇÃO INCOMPLETA NA VERCEL\n\nA chave 'VITE_API_KEY' não foi encontrada. O aplicativo não consegue falar com o Google.\n\nSolução:\n1. Vá no painel da Vercel.\n2. Settings > Environment Variables.\n3. Adicione VITE_API_KEY.\n4. Faça REDEPLOY.",
+                text: "⚠️ Chave de API não encontrada. Configure a VITE_API_KEY na Vercel.",
                 timestamp: new Date(),
                 isError: true
             };
@@ -133,34 +132,38 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
             
             // SYSTEM INSTRUCTION ATUALIZADA - REGRAS ESTRITAS
             const systemInstruction = `
-                Você é um consultor financeiro pessoal experiente, amigável e sofisticado.
+                Você é um consultor financeiro pessoal experiente e amigável.
                 
                 CONTEXTO FINANCEIRO (JSON):
                 ${context}
                 
-                REGRAS ESTRITAS DE FORMATAÇÃO (IGNORE ISSO E FALHARÁ):
-                1. PROIBIDO USAR ASTERISCOS (*). Nunca use Markdown para negrito, itálico ou listas. O texto deve ser limpo.
-                2. LISTAS: Use apenas hífens (-) ou emojis como marcadores.
-                3. DESTAQUES: Para destacar algo importante, use "aspas" ou LETRAS MAIÚSCULAS. Não use negrito.
+                REGRAS ESTRITAS DE FORMATAÇÃO (SIGA RIGOROSAMENTE):
+                1. NÃO USE FORMATACAO MARKDOWN: Não use asteriscos (**negrito** ou *italico*), não use cerquilhas (#) para titulos. Escreva apenas texto puro.
+                2. Use LETRAS MAIUSCULAS para destacar titulos ou valores importantes.
+                3. Use apenas hifens (-) ou emojis para listas.
                 
-                REGRAS DE LINGUAGEM E ESTILO:
-                1. ORTOGRAFIA: Use Português do Brasil culto e gramaticalmente impecável. Revise acentuação.
-                2. EMOJIS: Use emojis (💰, 📊, 💡, 🚀, ✅) moderadamente para tornar a resposta visualmente agradável e amigável.
-                3. TOM: Seja direto, prático e educado. Evite "palestras" longas. Vá direto ao ponto.
+                REGRAS DE ESTILO:
+                1. Use Português do Brasil culto e correto. Sem gírias excessivas.
+                2. Use emojis (💰, 📊, 💡, ✅) para tornar o texto amigável.
+                3. Seja direto e prático. Dê conselhos acionáveis.
             `;
 
-            const response = await ai.models.generateContent({
+            const chat = ai.chats.create({
                 model: 'gemini-2.5-flash',
-                contents: text,
-                config: {
-                    systemInstruction: systemInstruction,
-                }
+                config: { systemInstruction },
+                history: messages.filter(m => !m.isError && m.id !== 'intro').map(m => ({
+                    role: m.role,
+                    parts: [{ text: m.text }]
+                }))
             });
+
+            const result = await chat.sendMessage(text);
+            const responseText = result.response.text();
 
             const modelMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: response.text || "Não consegui gerar uma resposta. Tente novamente.",
+                text: responseText,
                 timestamp: new Date()
             };
 
@@ -168,14 +171,10 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
 
         } catch (error: any) {
             console.error("Erro na IA:", error);
-            
-            let errorDetails = error.toString();
-            if (error.message) errorDetails = error.message;
-
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: `❌ Erro ao processar:\n${errorDetails}`,
+                text: "Desculpe, tive um problema ao conectar com minha inteligência. Tente novamente mais tarde.",
                 timestamp: new Date(),
                 isError: true
             };
@@ -187,13 +186,11 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
 
     const handleAnalyzeNow = () => {
         if (isLoading) return;
-        handleSendMessage("Por favor, analise minhas finanças atuais. Resuma quanto gastei, onde gastei mais e me dê uma dica prática de economia. Use emojis.");
+        handleSendMessage("Analise minhas finanças atuais. Resuma quanto gastei, onde gastei mais e me dê uma dica de economia.");
     };
 
     return (
         <div className="flex flex-col h-full bg-gray-50 dark:bg-slate-900 rounded-lg overflow-hidden relative">
-            
-            {/* Debug/Status Bar - VISÍVEL APENAS SE DER ERRO OU EM DESENVOLVIMENTO */}
             <div className={`text-xs p-2 text-center font-bold flex items-center justify-center gap-2 ${keyStatus === 'found' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
                 {keyStatus === 'found' ? (
                     <><ShieldCheck className="w-4 h-4" /> IA Conectada</>
@@ -202,7 +199,6 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
                 )}
             </div>
 
-            {/* Header Area */}
             <div className="bg-white dark:bg-slate-800 p-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center shadow-sm z-10">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-gradient-to-br from-teal-400 to-cyan-600 rounded-lg text-white shadow-lg shadow-teal-500/20">
@@ -223,7 +219,6 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
                 </button>
             </div>
 
-            {/* Chat Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50 dark:bg-slate-900">
                 {messages.map((msg) => (
                     <div 
@@ -262,7 +257,6 @@ const AiAssistantPage: React.FC<AiAssistantPageProps> = ({ group, transactions, 
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
             <div className="p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
                 <form 
                     onSubmit={(e) => {

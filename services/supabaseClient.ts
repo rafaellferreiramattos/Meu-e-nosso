@@ -14,8 +14,9 @@ const getEnv = (key: string) => {
     return '';
 };
 
-const supabaseUrl = getEnv('VITE_SUPABASE_URL') || getEnv('REACT_APP_SUPABASE_URL');
-const supabaseKey = getEnv('VITE_SUPABASE_KEY') || getEnv('REACT_APP_SUPABASE_KEY');
+// .trim() é essencial para remover espaços em branco acidentais ao copiar da Vercel
+const supabaseUrl = (getEnv('VITE_SUPABASE_URL') || getEnv('REACT_APP_SUPABASE_URL') || '').trim();
+const supabaseKey = (getEnv('VITE_SUPABASE_KEY') || getEnv('REACT_APP_SUPABASE_KEY') || '').trim();
 
 // Só cria o cliente se as chaves existirem
 export const supabase = (supabaseUrl && supabaseKey) 
